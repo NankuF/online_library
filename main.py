@@ -55,6 +55,29 @@ def download_txt(url, filename, book_id, folder='books/'):
     return filepath
 
 
+def fetch_file_extension(url: str) -> str:
+    """Получить расширение файла из url"""
+    clear_path = urllib.parse.unquote(urllib.parse.urlsplit(url).path)
+    return os.path.splitext(clear_path)[1]
+
+
+def fetch_filename(url: str) -> str:
+    """Получить имя файла из url, без расширения"""
+    clear_path = urllib.parse.unquote(urllib.parse.urlsplit(url).path)
+    return os.path.splitext(clear_path)[0].split('/')[-1]
+
+
+def download_image(url: str, folder='images/'):
+    """Скачать изображение"""
+    resp = requests.get(url)
+    resp.raise_for_status()
+    filename = f'{fetch_filename(url)}{fetch_file_extension(url)}'
+    path = os.path.join(folder, filename)
+
+    with open(path, 'wb') as file:
+        file.write(resp.content)
+
+
 url = 'http://tululu.org/b'
 with requests.Session() as session:
     for i in range(1, 11):
@@ -75,8 +98,11 @@ with requests.Session() as session:
             #              '/txt.php' in a['href']][0]
             book_link = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
         except IndexError:
+            print('Отсутствует ссылка на скачивание книги.')
             continue
-        if book_link:
-            scheme, netloc = urllib.parse.urlsplit(resp.url).scheme, urllib.parse.urlsplit(resp.url).netloc
-            book_link_url = urllib.parse.urlunsplit((scheme, netloc, book_link, '', ''))
-            download_txt(book_link_url, book_name, book_id=i)
+
+        image = soup.find('div', class_='bookimage').a.img['src']
+        image_url = urllib.parse.urljoin(resp.url, image)
+        book_link_url = urllib.parse.urljoin(resp.url, book_link)
+        download_txt(book_link_url, book_name, book_id=i)
+        download_image(image_url)
