@@ -69,6 +69,7 @@ def fetch_filename(url: str) -> str:
 
 def download_image(url: str, folder='images/'):
     """Скачать изображение"""
+    os.makedirs(folder, exist_ok=True)
     resp = requests.get(url)
     resp.raise_for_status()
     filename = f'{fetch_filename(url)}{fetch_file_extension(url)}'
@@ -78,40 +79,58 @@ def download_image(url: str, folder='images/'):
         file.write(resp.content)
 
 
+def parse_book_page(response) -> dict:
+    """
+    Возвращает словарь со всеми данными о книге: название, автор и т.д.
+    :param response:
+    :return:
+    """
+    soup = BeautifulSoup(response.text, 'lxml')
+    tree = etree.HTML(response.content)
+
+    book_name, book_author = [text.strip() for text in soup.find('h1').text.split('::')]
+    book_link = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
+    book_link_url = urllib.parse.urljoin(response.url, book_link)
+    image = soup.find('div', class_='bookimage').a.img['src']
+    image_url = urllib.parse.urljoin(response.url, image)
+    comments = [tag.contents[4].text for tag in soup.find_all('div', class_='texts')]
+    genres = [genre.strip() for genre in
+              soup.find_all('span', class_='d_book')[0].text.strip('.').split('Жанр книги: ')[1].strip().split(',')]
+
+    return {
+        'book_name': book_name,
+        'book_author': book_author,
+        'book_link': book_link,
+        'book_link_url': book_link_url,
+        'image_url': image_url,
+        'comments': comments,
+        'genres': genres,
+    }
+
+
 url = 'http://tululu.org/b'
 with requests.Session() as session:
-    for i in range(9, 11):
+    for i in range(1, 11):
         resp = session.get(f'{url}{i}/')
         resp.raise_for_status()
+
         try:
             check_for_redirect(resp)
         except:
             print('Страница не найдена')
             continue
 
-        soup = BeautifulSoup(resp.text, 'lxml')
-        tree = etree.HTML(resp.content)
-
-        book_name, book_author = [text.strip() for text in soup.find('h1').text.split('::')]
         try:
-            # book_href = [a['href'] for a in soup.find('table', class_='d_book').find_all('a', href=True) if
-            #              '/txt.php' in a['href']][0]
-            book_link = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
-        except IndexError:
+            parse_info = parse_book_page(resp)
+        except:
             print('Отсутствует ссылка на скачивание книги.')
             continue
 
-        image = soup.find('div', class_='bookimage').a.img['src']
-        comments = [tag.contents[4].text for tag in soup.find_all('div', class_='texts')]
-        genres = [genre.strip() for genre in
-                  soup.find_all('span', class_='d_book')[0].text.strip('.').split('Жанр книги: ')[1].strip().split(',')]
-        image_url = urllib.parse.urljoin(resp.url, image)
-        book_link_url = urllib.parse.urljoin(resp.url, book_link)
-        print('Заголовок: ', book_name, '::', book_author)
-        print('Link:', book_link_url)
-        print('image_url:', image_url)
-        print('genres:', genres)
-        print('comments: ', comments)
+        print('Заголовок: ', parse_info['book_name'], '::', parse_info['book_author'])
+        print('Link:', parse_info['book_link_url'])
+        print('image_url:', parse_info['image_url'])
+        print('genres:', parse_info['genres'])
+        print('comments: ', parse_info['comments'])
         print('*' * 30)
-        # download_txt(book_link_url, book_name, book_id=i)
-        # download_image(image_url)
+        download_txt(parse_info['book_link_url'], parse_info['book_name'], book_id=i)
+        download_image(parse_info['image_url'])
