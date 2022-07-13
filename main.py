@@ -1,3 +1,4 @@
+import argparse
 import os
 import urllib.parse
 
@@ -6,6 +7,14 @@ from bs4 import BeautifulSoup
 from lxml import etree
 from pathvalidate import sanitize_filename
 from requests import HTTPError
+
+
+def create_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--start_id', type=int, default=1, help='с какого id начать скачивание книг.')
+    parser.add_argument('-e', '--end_id', type=int, default=2, help='на каком id закончить скачивание книг.')
+
+    return parser
 
 
 def get_url_without_scheme(url: str) -> str:
@@ -108,10 +117,15 @@ def parse_book_page(response) -> dict:
     }
 
 
+parser = create_parser()
+namespace = parser.parse_args()
+start_id = namespace.start_id
+end_id = namespace.end_id
+
 url = 'http://tululu.org/b'
 with requests.Session() as session:
-    for i in range(1, 11):
-        resp = session.get(f'{url}{i}/')
+    for book_id in range(start_id, end_id+1):
+        resp = session.get(f'{url}{book_id}/')
         resp.raise_for_status()
 
         try:
@@ -132,5 +146,5 @@ with requests.Session() as session:
         print('genres:', parse_info['genres'])
         print('comments: ', parse_info['comments'])
         print('*' * 30)
-        download_txt(parse_info['book_link_url'], parse_info['book_name'], book_id=i)
+        download_txt(parse_info['book_link_url'], parse_info['book_name'], book_id=book_id)
         download_image(parse_info['image_url'])
