@@ -80,7 +80,7 @@ def download_image(url: str, folder='images/'):
 
 url = 'http://tululu.org/b'
 with requests.Session() as session:
-    for i in range(1, 11):
+    for i in range(9, 11):
         resp = session.get(f'{url}{i}/')
         resp.raise_for_status()
         try:
@@ -102,7 +102,10 @@ with requests.Session() as session:
             continue
 
         image = soup.find('div', class_='bookimage').a.img['src']
+        comments = [text.contents[4].text for text in soup.find_all('div', class_='texts')]
         image_url = urllib.parse.urljoin(resp.url, image)
         book_link_url = urllib.parse.urljoin(resp.url, book_link)
         download_txt(book_link_url, book_name, book_id=i)
         download_image(image_url)
+
+
