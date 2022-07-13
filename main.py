@@ -21,7 +21,7 @@ def get_url_without_scheme(url: str) -> str:
     """
     Удаляет схему из url.
 
-    :param url:
+    :param url: https://tululu.org/txt.php?id=1
     :return: '://tululu.org/txt.php?id=1'
     """
     url_parse = urllib.parse.urlsplit(url)
@@ -33,8 +33,7 @@ def check_for_redirect(response):
     """
     Проверяет соответствие конечного адреса с начальным.
 
-    :param response: ответ сервера
-    :return:
+    :param response: ответ сервера.
     """
 
     if response.history:
@@ -51,11 +50,12 @@ def download_txt(url, filename, book_id, folder='books/'):
         url (str): Cсылка на текст, который хочется скачать.
         filename (str): Имя файла, с которым сохранять.
         folder (str): Папка, куда сохранять.
+        book_id (int): id книги.
     Returns:
         str: Путь до файла, куда сохранён текст.
     """
     os.makedirs(folder, exist_ok=True)
-    resp = requests.get(url)
+    resp = session.get(url)
     resp.raise_for_status()
     filename = f'{book_id}. {sanitize_filename(filename)}'
     filepath = os.path.join(folder, filename)
@@ -79,7 +79,7 @@ def fetch_filename(url: str) -> str:
 def download_image(url: str, folder='images/'):
     """Скачать изображение"""
     os.makedirs(folder, exist_ok=True)
-    resp = requests.get(url)
+    resp = session.get(url)
     resp.raise_for_status()
     filename = f'{fetch_filename(url)}{fetch_file_extension(url)}'
     path = os.path.join(folder, filename)
@@ -91,15 +91,15 @@ def download_image(url: str, folder='images/'):
 def parse_book_page(response) -> dict:
     """
     Возвращает словарь со всеми данными о книге: название, автор и т.д.
-    :param response:
-    :return:
+    :param response: ответ сервера.
+    :return: словарь с собранными данными.
     """
     soup = BeautifulSoup(response.text, 'lxml')
     tree = etree.HTML(response.content)
 
     book_name, book_author = [text.strip() for text in soup.find('h1').text.split('::')]
     book_link = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
-    book_link_url = urllib.parse.urljoin(response.url, book_link)
+    book_url = urllib.parse.urljoin(response.url, book_link)
     image = soup.find('div', class_='bookimage').a.img['src']
     image_url = urllib.parse.urljoin(response.url, image)
     comments = [tag.contents[4].text for tag in soup.find_all('div', class_='texts')]
@@ -109,22 +109,22 @@ def parse_book_page(response) -> dict:
     return {
         'book_name': book_name,
         'book_author': book_author,
-        'book_link': book_link,
-        'book_link_url': book_link_url,
+        'book_url': book_url,
         'image_url': image_url,
         'comments': comments,
         'genres': genres,
     }
 
 
-parser = create_parser()
-namespace = parser.parse_args()
-start_id = namespace.start_id
-end_id = namespace.end_id
+def main():
+    parser = create_parser()
+    namespace = parser.parse_args()
+    start_id = namespace.start_id
+    end_id = namespace.end_id
 
-url = 'http://tululu.org/b'
-with requests.Session() as session:
-    for book_id in range(start_id, end_id+1):
+    url = 'http://tululu.org/b'
+
+    for book_id in range(start_id, end_id + 1):
         resp = session.get(f'{url}{book_id}/')
         resp.raise_for_status()
 
@@ -140,11 +140,10 @@ with requests.Session() as session:
             print('Отсутствует ссылка на скачивание книги.')
             continue
 
-        print('Заголовок: ', parse_info['book_name'], '::', parse_info['book_author'])
-        print('Link:', parse_info['book_link_url'])
-        print('image_url:', parse_info['image_url'])
-        print('genres:', parse_info['genres'])
-        print('comments: ', parse_info['comments'])
-        print('*' * 30)
-        download_txt(parse_info['book_link_url'], parse_info['book_name'], book_id=book_id)
+        download_txt(parse_info['book_url'], parse_info['book_name'], book_id=book_id)
         download_image(parse_info['image_url'])
+
+
+if __name__ == '__main__':
+    with requests.Session() as session:
+        main()
