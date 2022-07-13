@@ -102,10 +102,16 @@ with requests.Session() as session:
             continue
 
         image = soup.find('div', class_='bookimage').a.img['src']
-        comments = [text.contents[4].text for text in soup.find_all('div', class_='texts')]
+        comments = [tag.contents[4].text for tag in soup.find_all('div', class_='texts')]
+        genres = [genre.strip() for genre in
+                  soup.find_all('span', class_='d_book')[0].text.strip('.').split('Жанр книги: ')[1].strip().split(',')]
         image_url = urllib.parse.urljoin(resp.url, image)
         book_link_url = urllib.parse.urljoin(resp.url, book_link)
-        download_txt(book_link_url, book_name, book_id=i)
-        download_image(image_url)
-
-
+        print('Заголовок: ', book_name, '::', book_author)
+        print('Link:', book_link_url)
+        print('image_url:', image_url)
+        print('genres:', genres)
+        print('comments: ', comments)
+        print('*' * 30)
+        # download_txt(book_link_url, book_name, book_id=i)
+        # download_image(image_url)
