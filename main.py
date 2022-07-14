@@ -48,24 +48,12 @@ def download_txt(url, filename, book_id, folder='books/'):
     return filepath
 
 
-def fetch_file_extension(url: str) -> str:
-    """Получить расширение файла из url"""
-    clear_path = urllib.parse.unquote(urllib.parse.urlsplit(url).path)
-    return os.path.splitext(clear_path)[1]
-
-
-def fetch_filename(url: str) -> str:
-    """Получить имя файла из url, без расширения"""
-    clear_path = urllib.parse.unquote(urllib.parse.urlsplit(url).path)
-    return os.path.splitext(clear_path)[0].split('/')[-1]
-
-
 def download_image(url: str, folder='images/'):
     """Скачать изображение"""
     os.makedirs(folder, exist_ok=True)
     resp = session.get(url)
     resp.raise_for_status()
-    filename = f'{fetch_filename(url)}{fetch_file_extension(url)}'
+    filename = os.path.basename(url)
     path = os.path.join(folder, filename)
 
     with open(path, 'wb') as file:
