@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from lxml import etree
 from pathvalidate import sanitize_filename
 from requests import HTTPError
+from requests.sessions import Session
 
 
 def create_parser():
@@ -29,7 +30,7 @@ def check_for_redirect(response):
         raise HTTPError
 
 
-def download_txt(url, filename, book_id, folder='books/'):
+def download_txt(url, filename, book_id, session: Session, folder='books/'):
     """Функция для скачивания текстовых файлов.
 
     Args:
@@ -37,6 +38,7 @@ def download_txt(url, filename, book_id, folder='books/'):
         filename (str): Имя файла, с которым сохранять.
         folder (str): Папка, куда сохранять.
         book_id (int): id книги.
+        session (Session) - сессия http-соединения.
     Returns:
         str: Путь до файла, куда сохранён текст.
     """
@@ -51,7 +53,7 @@ def download_txt(url, filename, book_id, folder='books/'):
     return filepath
 
 
-def download_image(url: str, folder='images/'):
+def download_image(url: str, session: Session, folder='images/'):
     """Скачать изображение"""
     os.makedirs(folder, exist_ok=True)
     resp = session.get(url)
@@ -104,48 +106,47 @@ def main():
     end_id = namespace.end_id
 
     url = 'https://tululu.org/b'
+    with requests.Session() as session:
+        for book_id in range(start_id, end_id + 1):
+            resp = session.get(f'{url}{book_id}/')
+            resp.raise_for_status()
 
-    for book_id in range(start_id, end_id + 1):
-        resp = session.get(f'{url}{book_id}/')
-        resp.raise_for_status()
-
-        try:
-            check_for_redirect(resp)
-        except HTTPError:
-            print('Страница не найдена.', resp.history[0].url, file=sys.stderr)
-            continue
-
-        try:
-            book = parse_book_page(resp)
-        except IndexError:
-            print('Отсутствует ссылка на скачивание книги.', resp.url, file=sys.stderr)
-            continue
-
-        while True:
             try:
-                download_txt(book['book_url'], book['book_name'], book_id=book_id)
-                break
-            except requests.ConnectionError:
-                print('Отсутствует интернет-соединение.', file=sys.stderr)
-                time.sleep(connection_error_pause)
-                continue
+                check_for_redirect(resp)
             except HTTPError:
-                print('Битая ссылка.', book['book_url'], file=sys.stderr)
-                break
+                print('Страница не найдена.', resp.history[0].url, file=sys.stderr)
+                continue
 
-        while True:
             try:
-                download_image(book['image_url'])
-                break
-            except requests.ConnectionError:
-                print('Отсутствует интернет-соединение.', file=sys.stderr)
-                time.sleep(connection_error_pause)
+                book = parse_book_page(resp)
+            except IndexError:
+                print('Отсутствует ссылка на скачивание книги.', resp.url, file=sys.stderr)
                 continue
-            except HTTPError:
-                print('Битая ссылка.', book['image_url'], file=sys.stderr)
-                break
+
+            while True:
+                try:
+                    download_txt(book['book_url'], book['book_name'], book_id=book_id, session=session)
+                    break
+                except requests.ConnectionError:
+                    print('Отсутствует интернет-соединение.', file=sys.stderr)
+                    time.sleep(connection_error_pause)
+                    continue
+                except HTTPError:
+                    print('Битая ссылка.', book['book_url'], file=sys.stderr)
+                    break
+
+            while True:
+                try:
+                    download_image(book['image_url'], session=session)
+                    break
+                except requests.ConnectionError:
+                    print('Отсутствует интернет-соединение.', file=sys.stderr)
+                    time.sleep(connection_error_pause)
+                    continue
+                except HTTPError:
+                    print('Битая ссылка.', book['image_url'], file=sys.stderr)
+                    break
 
 
 if __name__ == '__main__':
-    with requests.Session() as session:
-        main()
+    main()
