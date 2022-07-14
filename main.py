@@ -122,13 +122,13 @@ def main():
             continue
 
         try:
-            parse_info = parse_book_page(resp)
+            book = parse_book_page(resp)
         except IndexError:
             print('Отсутствует ссылка на скачивание книги.')
             continue
 
-        download_txt(parse_info['book_url'], parse_info['book_name'], book_id=book_id)
-        download_image(parse_info['image_url'])
+        download_txt(book['book_url'], book['book_name'], book_id=book_id)
+        download_image(book['image_url'])
 
 
 if __name__ == '__main__':
