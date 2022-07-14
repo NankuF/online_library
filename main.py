@@ -41,6 +41,7 @@ def download_txt(url, filename, book_id, folder='books/'):
     os.makedirs(folder, exist_ok=True)
     resp = session.get(url)
     resp.raise_for_status()
+    check_for_redirect(resp)
     filename = f'{book_id}. {sanitize_filename(filename)}'
     filepath = os.path.join(folder, filename)
     with open(f'{filepath}.txt', 'wb') as file:
@@ -53,6 +54,7 @@ def download_image(url: str, folder='images/'):
     os.makedirs(folder, exist_ok=True)
     resp = session.get(url)
     resp.raise_for_status()
+    check_for_redirect(resp)
     filename = os.path.basename(url)
     path = os.path.join(folder, filename)
 
@@ -77,16 +79,17 @@ def parse_book_page(response) -> dict:
     book_url = urllib.parse.urljoin(response.url, book_link)
     image = soup.find('div', class_='bookimage').a.img['src']
     image_url = urllib.parse.urljoin(response.url, image)
-    comments = [tag.contents[4].text for tag in soup.find_all('div', class_='texts')]
-    genres = [genre.strip() for genre in
-              soup.find_all('span', class_='d_book')[0].text.strip('.').split('Жанр книги: ')[1].strip().split(',')]
+    comments = soup.find_all('div', class_='texts')
+    book_comments = [comment.find('span', class_='black').text for comment in comments]
+    raw_genres = soup.find_all('span', class_='d_book')
+    genres = [genre.text for genres in raw_genres for genre in genres.find_all('a')]
 
     return {
         'book_name': book_name,
         'book_author': book_author,
         'book_url': book_url,
         'image_url': image_url,
-        'comments': comments,
+        'comments': book_comments,
         'genres': genres,
     }
 
@@ -106,17 +109,26 @@ def main():
         try:
             check_for_redirect(resp)
         except HTTPError:
-            print('Страница не найдена.')
+            print('Страница не найдена.', resp.history[0].url)
             continue
 
         try:
             book = parse_book_page(resp)
         except IndexError:
-            print('Отсутствует ссылка на скачивание книги.')
+            print('Отсутствует ссылка на скачивание книги.', resp.url)
             continue
 
-        download_txt(book['book_url'], book['book_name'], book_id=book_id)
-        download_image(book['image_url'])
+        try:
+            download_txt(book['book_url'], book['book_name'], book_id=book_id)
+        except HTTPError:
+            print('Битая ссылка.')
+            continue
+
+        try:
+            download_image(book['image_url'])
+        except HTTPError:
+            print('Битая ссылка.')
+            continue
 
 
 if __name__ == '__main__':
