@@ -1,5 +1,7 @@
 import argparse
 import os
+import sys
+import time
 import urllib.parse
 
 import requests
@@ -95,6 +97,7 @@ def parse_book_page(response) -> dict:
 
 
 def main():
+    connection_error_pause = 120
     parser = create_parser()
     namespace = parser.parse_args()
     start_id = namespace.start_id
@@ -109,26 +112,38 @@ def main():
         try:
             check_for_redirect(resp)
         except HTTPError:
-            print('Страница не найдена.', resp.history[0].url)
+            print('Страница не найдена.', resp.history[0].url, file=sys.stderr)
             continue
 
         try:
             book = parse_book_page(resp)
         except IndexError:
-            print('Отсутствует ссылка на скачивание книги.', resp.url)
+            print('Отсутствует ссылка на скачивание книги.', resp.url, file=sys.stderr)
             continue
 
-        try:
-            download_txt(book['book_url'], book['book_name'], book_id=book_id)
-        except HTTPError:
-            print('Битая ссылка.')
-            continue
+        while True:
+            try:
+                download_txt(book['book_url'], book['book_name'], book_id=book_id)
+                break
+            except requests.ConnectionError:
+                print('Отсутствует интернет-соединение.', file=sys.stderr)
+                time.sleep(connection_error_pause)
+                continue
+            except HTTPError:
+                print('Битая ссылка.', book['book_url'], file=sys.stderr)
+                break
 
-        try:
-            download_image(book['image_url'])
-        except HTTPError:
-            print('Битая ссылка.')
-            continue
+        while True:
+            try:
+                download_image(book['image_url'])
+                break
+            except requests.ConnectionError:
+                print('Отсутствует интернет-соединение.', file=sys.stderr)
+                time.sleep(connection_error_pause)
+                continue
+            except HTTPError:
+                print('Битая ссылка.', book['image_url'], file=sys.stderr)
+                break
 
 
 if __name__ == '__main__':
