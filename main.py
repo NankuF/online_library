@@ -17,30 +17,14 @@ def create_parser():
     return parser
 
 
-def get_url_without_scheme(url: str) -> str:
-    """
-    Удаляет схему из url.
-
-    :param url: https://tululu.org/txt.php?id=1
-    :return: '://tululu.org/txt.php?id=1'
-    """
-    url_parse = urllib.parse.urlsplit(url)
-    url_without_scheme = url_parse.geturl().strip(url_parse.scheme)
-    return url_without_scheme
-
-
 def check_for_redirect(response):
     """
-    Проверяет соответствие конечного адреса с начальным.
+    Проверяет был ли редирект.
 
     :param response: ответ сервера.
     """
-
     if response.history:
-        current_url = get_url_without_scheme(response.url)
-        redirect_url = get_url_without_scheme(response.history[-1].url)
-        if current_url != redirect_url:
-            raise HTTPError
+        raise HTTPError
 
 
 def download_txt(url, filename, book_id, folder='books/'):
@@ -98,7 +82,10 @@ def parse_book_page(response) -> dict:
     tree = etree.HTML(response.content)
 
     book_name, book_author = [text.strip() for text in soup.find('h1').text.split('::')]
-    book_link = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
+    if tree.xpath("//td/a[contains(@href,'/txt.php')]"):
+        book_link = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
+    else:
+        raise IndexError
     book_url = urllib.parse.urljoin(response.url, book_link)
     image = soup.find('div', class_='bookimage').a.img['src']
     image_url = urllib.parse.urljoin(response.url, image)
@@ -122,7 +109,7 @@ def main():
     start_id = namespace.start_id
     end_id = namespace.end_id
 
-    url = 'http://tululu.org/b'
+    url = 'https://tululu.org/b'
 
     for book_id in range(start_id, end_id + 1):
         resp = session.get(f'{url}{book_id}/')
@@ -130,13 +117,13 @@ def main():
 
         try:
             check_for_redirect(resp)
-        except:
-            print('Страница не найдена')
+        except HTTPError:
+            print('Страница не найдена.')
             continue
 
         try:
             parse_info = parse_book_page(resp)
-        except:
+        except IndexError:
             print('Отсутствует ссылка на скачивание книги.')
             continue
 
