@@ -99,7 +99,8 @@ def parse_book_page(response) -> dict:
 
 
 def main():
-    connection_error_pause = 120
+    connection_error_timeout = 300
+    count_reconnect = 1
     parser = create_parser()
     namespace = parser.parse_args()
     start_id = namespace.start_id
@@ -125,8 +126,11 @@ def main():
                     traceback.print_exc(limit=0)
                     break
                 except requests.ConnectionError:
+                    if count_reconnect < 2:
+                        connection_error_timeout = 30
                     traceback.print_exc(limit=0)
-                    time.sleep(connection_error_pause)
+                    time.sleep(connection_error_timeout)
+                    count_reconnect += 1
                     continue
 
 
