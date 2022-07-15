@@ -1,7 +1,7 @@
 import argparse
 import os
-import sys
 import time
+import traceback
 import urllib.parse
 
 import requests
@@ -27,7 +27,7 @@ def check_for_redirect(response):
     :param response: ответ сервера.
     """
     if response.history:
-        raise HTTPError
+        raise HTTPError('Битая ссылка.')
 
 
 def download_txt(url, filename, book_id, session: Session, folder='books/'):
@@ -79,7 +79,7 @@ def parse_book_page(response) -> dict:
     if tree.xpath("//td/a[contains(@href,'/txt.php')]"):
         book_link = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
     else:
-        raise IndexError
+        raise IndexError('Отсутствует ссылка на скачивание книги.')
     book_url = urllib.parse.urljoin(response.url, book_link)
     image = soup.find('div', class_='bookimage').a.img['src']
     image_url = urllib.parse.urljoin(response.url, image)
@@ -108,44 +108,26 @@ def main():
     url = 'https://tululu.org/b'
     with requests.Session() as session:
         for book_id in range(start_id, end_id + 1):
-            resp = session.get(f'{url}{book_id}/')
-            resp.raise_for_status()
-
-            try:
-                check_for_redirect(resp)
-            except HTTPError:
-                print('Страница не найдена.', resp.history[0].url, file=sys.stderr)
-                continue
-
-            try:
-                book = parse_book_page(resp)
-            except IndexError:
-                print('Отсутствует ссылка на скачивание книги.', resp.url, file=sys.stderr)
-                continue
-
             while True:
                 try:
+                    resp = session.get(f'{url}{book_id}/')
+                    resp.raise_for_status()
+                    check_for_redirect(resp)
+
+                    book = parse_book_page(resp)
                     download_txt(book['book_url'], book['book_name'], book_id=book_id, session=session)
-                    break
-                except requests.ConnectionError:
-                    print('Отсутствует интернет-соединение.', file=sys.stderr)
-                    time.sleep(connection_error_pause)
-                    continue
-                except HTTPError:
-                    print('Битая ссылка.', book['book_url'], file=sys.stderr)
-                    break
-
-            while True:
-                try:
                     download_image(book['image_url'], session=session)
                     break
+                except HTTPError:
+                    traceback.print_exc(limit=0)
+                    break
+                except IndexError:
+                    traceback.print_exc(limit=0)
+                    break
                 except requests.ConnectionError:
-                    print('Отсутствует интернет-соединение.', file=sys.stderr)
+                    traceback.print_exc(limit=0)
                     time.sleep(connection_error_pause)
                     continue
-                except HTTPError:
-                    print('Битая ссылка.', book['image_url'], file=sys.stderr)
-                    break
 
 
 if __name__ == '__main__':
