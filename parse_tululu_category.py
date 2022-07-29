@@ -51,12 +51,12 @@ def get_all_links(url, session, start_page=1, end_page=None) -> dict:
     return books_collection
 
 
-def save_book_links(links: dict):
+def save_book_links(links: dict, filepath: str):
     """
     Сохраняет ссылки на книги в json.
 
     :param links: словарь со ссылками на книги.
+    :param filepath: путь до файла json.
     """
-
-    with open('books_collection.json', 'w') as file:
+    with open(filepath, 'w') as file:
         json.dump(links, file, indent=4, ensure_ascii=False)
