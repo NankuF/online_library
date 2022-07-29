@@ -14,14 +14,11 @@ def get_links_on_the_page(response: requests.Response) -> dict:
     :return: словарь с нумерацией страниц и списком книг, максимальной страницей.
     """
     soup = BeautifulSoup(response.text, 'lxml')
-    books = soup.find_all('table', class_='d_book')
-    current_page = soup.find('span', class_='npage_select').text
-    max_page = soup.find_all('a', class_='npage')[-1].text
-    books_collection = {}
-    book_hrefs = []
-    for book in books:
-        book_hrefs.append(book.find('a').attrs['href'])
+    book_hrefs = [book.select_one('a').attrs['href'] for book in soup.select('.d_book')]
+    current_page = soup.select_one('.npage_select').text
+    max_page = soup.select('.npage')[-1].text
     book_links = [urllib.parse.urljoin('https://tululu.org/', link) for link in book_hrefs]
+    books_collection = {}
     books_collection.update({current_page: book_links})
     return {'books': books_collection, 'max_page': int(max_page)}
 

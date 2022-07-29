@@ -17,16 +17,10 @@ from parse_tululu_category import get_all_links, save_book_links
 
 def create_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--start_page', type=int, default=699, help='с какой страницы начать скачивание книг.')
-    parser.add_argument('-e', '--end_page', type=int, help='какую страницу с книгами скачать последней.')
+    parser.add_argument('-s', '--start_page', type=int, default=1, help='с какой страницы начать скачивание книг.')
+    parser.add_argument('-e', '--end_page', type=int, default=3, help='какую страницу с книгами скачать последней.')
 
     return parser
-
-
-def fetch_file_extension(url: str) -> str:
-    """Получить расширение файла из url"""
-    clear_path = urllib.parse.unquote(urllib.parse.urlsplit(url).path)
-    return os.path.splitext(clear_path)[1]
 
 
 def fetch_filename(url: str) -> str:
@@ -95,21 +89,19 @@ def parse_book_page(response) -> dict:
 
     title, author = [text.strip() for text in soup.find('h1').text.split('::')]
     if tree.xpath("//td/a[contains(@href,'/txt.php')]"):
-        book_url = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
+        download_book_url = tree.xpath("//td/a[contains(@href,'/txt.php')]")[0].attrib['href']
     else:
         raise IndexError('Отсутствует ссылка на скачивание книги.')
-    book_url = urllib.parse.urljoin(response.url, book_url)
-    image = soup.find('div', class_='bookimage').a.img['src']
+    download_book_url = urllib.parse.urljoin(response.url, download_book_url)
+    image = soup.select_one('.bookimage a img[src]').attrs['src']
     image_url = urllib.parse.urljoin(response.url, image)
-    comments = soup.find_all('div', class_='texts')
-    comments = [comment.find('span', class_='black').text for comment in comments]
-    raw_genres = soup.find_all('span', class_='d_book')
-    genres = [genre.text for genres in raw_genres for genre in genres.find_all('a')]
+    comments = [tag.text for tag in soup.select('div.texts .black')]
+    genres = [tag.text for tag in soup.select('span.d_book a')]
 
     return {
         'title': title,
         'author': author,
-        'book_url': book_url,
+        'download_book_url': download_book_url,
         'image_url': image_url,
         'comments': comments,
         'genres': genres,
@@ -119,6 +111,7 @@ def parse_book_page(response) -> dict:
 def check_books_collection(url, session, start_page, end_page):
     """
     Проверяет достаточно ли данных для парсинга книг.
+
     :param url: ссылка на каталог с книгами.
     :param session: объект сессии.
     :param start_page: страница с которой начать скачивать ссылки на книги.
@@ -131,6 +124,9 @@ def check_books_collection(url, session, start_page, end_page):
         print(f'Скачиваю ссылки на книги c {start_page} по {last_page} страницы.')
         books_collections = get_all_links(url, start_page=start_page, end_page=end_page, session=session)
         save_book_links(books_collections)
+        with open('books_collection.json', 'r') as file:
+            books = json.load(file)
+        return books
     else:
         with open('books_collection.json', 'r') as file:
             books = json.load(file)
@@ -141,7 +137,7 @@ def check_books_collection(url, session, start_page, end_page):
             save_book_links(books_collections)
             with open('books_collection.json', 'r') as file:
                 books = json.load(file)
-    return books
+        return books
 
 
 def main():
@@ -168,7 +164,7 @@ def main():
                         check_for_redirect(resp)
 
                         book = parse_book_page(resp)
-                        book_path = download_txt(book['book_url'], book['title'], session=session)
+                        book_path = download_txt(book['download_book_url'], book['title'], session=session)
                         image_src = download_image(book['image_url'], session=session)
                         book.update({'book_path': book_path, 'image_src': image_src})
 
@@ -188,6 +184,7 @@ def main():
                         time.sleep(connection_error_timeout)
                         count_reconnect += 1
                         continue
+
     with open('fantastic_books.json', 'w', encoding='utf-8') as file:
         json.dump(library, file, indent=4, ensure_ascii=False)
 
