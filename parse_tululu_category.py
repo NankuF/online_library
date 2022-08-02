@@ -1,6 +1,7 @@
 import json
 import math
 import urllib.parse
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
@@ -51,12 +52,12 @@ def get_all_links(url, session, start_page=1, end_page=None) -> dict:
     return books_collection
 
 
-def save_book_links(links: dict, filepath: str):
+def save_book_links(links: dict, filepath: Path):
     """
     Сохраняет ссылки на книги в json.
 
     :param links: словарь со ссылками на книги.
     :param filepath: путь до файла json.
     """
-    with open(filepath, 'w') as file:
+    with open(filepath, 'w', encoding='utf-8') as file:
         json.dump(links, file, indent=4, ensure_ascii=False)

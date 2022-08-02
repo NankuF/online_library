@@ -4,6 +4,7 @@ import os
 import time
 import traceback
 import urllib.parse
+from pathlib import *
 
 import requests
 from bs4 import BeautifulSoup
@@ -44,45 +45,47 @@ def check_for_redirect(response):
         raise HTTPError('Битая ссылка.')
 
 
-def download_txt(url, filename, session: Session, folder):
+def download_txt(url, filename, session: Session, folder: Path) -> Path:
     """Функция для скачивания текстовых файлов.
 
     Args:
         url (str): Ссылка на текст, который хочется скачать.
         filename (str): Имя файла, с которым сохранять.
-        folder (str): Папка, куда сохранять.
+        folder (Path): Папка, куда сохранять.
         session (Session) - сессия http-соединения.
     Returns:
-        str: Путь до файла, куда сохранён текст.
+        Path: Путь до файла, куда сохранён текст.
     """
-    dir_ = f'{os.path.join(folder, "books")}'
-    os.makedirs(dir_, exist_ok=True)
+    dir_ = Path(folder) / 'books'
+    Path.mkdir(dir_, exist_ok=True)
+    file_extension = fetch_filename(url)
+    filename = f'{sanitize_filename(filename)}.{file_extension}'
+    filepath = Path(dir_, filename)
 
     resp = session.get(url)
     resp.raise_for_status()
     check_for_redirect(resp)
-    filename = f'{sanitize_filename(filename)}'
-    file_extension = fetch_filename(url)
-    filepath = f'{os.path.join(dir_, filename)}.{file_extension}'
+
     with open(filepath, 'wb') as file:
         file.write(resp.content)
     return filepath
 
 
-def download_image(url: str, session: Session, folder):
+def download_image(url: str, session: Session, folder: Path) -> Path:
     """Скачать изображение"""
-    dir_ = f'{os.path.join(folder, "images")}'
-    os.makedirs(dir_, exist_ok=True)
+    dir_ = Path(folder) / 'images'
+    Path.mkdir(dir_, exist_ok=True)
+    filename = Path(url).name
+    filepath = Path(dir_, filename)
+
     resp = session.get(url)
     resp.raise_for_status()
     check_for_redirect(resp)
-    filename = os.path.basename(url)
-    path = os.path.join(dir_, filename)
 
-    with open(path, 'wb') as file:
+    with open(filepath, 'wb') as file:
         file.write(resp.content)
 
-    return path
+    return filepath
 
 
 def parse_book_page(response) -> dict:
@@ -116,7 +119,7 @@ def parse_book_page(response) -> dict:
     }
 
 
-def save_links_collection(url: str, session, start_page: int, end_page: int, folder: str) -> dict:
+def save_links_collection(url: str, session, start_page: int, end_page: int, folder: Path) -> dict:
     """
     Проверяет есть ли ссылки для скачивания книг в директории. Если ссылок нет - скачивает и сохраняет их.
 
@@ -127,11 +130,11 @@ def save_links_collection(url: str, session, start_page: int, end_page: int, fol
     :param folder: куда сохранить файл.
     :return: словарь с ссылками на книги.
     """
-    book_collection_path = f'{folder}/links_collection.json'
+    book_collection_path = Path(folder) / 'links_collection.json'
     last_page = end_page if end_page is not None else 'последнюю'
     message = f'Скачиваю ссылки на книги c {start_page} по {last_page} страницы.'
-    if not os.path.exists(book_collection_path):
-        os.makedirs(folder, exist_ok=True)
+    if not Path(book_collection_path).exists():
+        Path.mkdir(folder, exist_ok=True)
         print(message)
         books_collections = get_all_links(url, start_page=start_page, end_page=end_page, session=session)
         save_book_links(books_collections, book_collection_path)
@@ -155,10 +158,10 @@ def main():
     namespace = parser.parse_args()
     start_page = namespace.start_page
     end_page = namespace.end_page
-    dest_folder = namespace.dest_folder or 'parse_result'
+    dest_folder = Path(namespace.dest_folder) or Path('parse_result')
     skip_imgs = namespace.skip_imgs or False
     skip_txt = namespace.skip_txt or False
-    json_path = namespace.json_path or 'parse_result'
+    json_path = Path(namespace.json_path) or Path('parse_result')
 
     url = 'https://tululu.org/l55/'
 
@@ -188,7 +191,7 @@ def main():
                         if not skip_imgs:
                             image_src = download_image(url=book['image_url'], session=session, folder=dest_folder)
 
-                        book.update({'book_path': book_path, 'image_src': image_src})
+                        book.update({'book_path': str(book_path), 'image_src': str(image_src)})
                         library.append(book)
                         break
                     except HTTPError:
@@ -205,8 +208,9 @@ def main():
                         count_reconnect += 1
                         continue
 
-    with open(f'{json_path}/fantastic_books_catalog.json', 'w', encoding='utf-8') as file:
-        os.makedirs(json_path, exist_ok=True)
+    path = Path(json_path) / 'fantastic_books_catalog.json'
+    Path.mkdir(path.parent, exist_ok=True)
+    with path.open('w', encoding='utf-8') as file:
         json.dump(library, file, indent=4, ensure_ascii=False)
 
 
