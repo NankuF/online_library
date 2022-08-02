@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 def get_links_on_the_page(response: requests.Response) -> dict:
     """
-    Скачивает ссылки на книги со страницы каталога.
+    Получает ссылки на книги со страницы каталога.
 
     :param response: объект Response.
     :return: словарь с нумерацией страниц и списком книг, максимальной страницей.
