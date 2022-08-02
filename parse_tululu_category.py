@@ -1,7 +1,5 @@
-import json
 import math
 import urllib.parse
-from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
@@ -39,7 +37,7 @@ def get_all_book_links(url, session, start_page=1, end_page=None) -> dict:
     book_links_collection = {}
     page_number = start_page
     while page_number <= end_page:
-        next_url = urllib.parse.urljoin(url, str(start_page))
+        next_url = urllib.parse.urljoin(url, str(page_number))
         resp = session.get(next_url)
         resp.raise_for_status()
 
@@ -50,14 +48,3 @@ def get_all_book_links(url, session, start_page=1, end_page=None) -> dict:
         page_number += 1
 
     return book_links_collection
-
-
-def save_book_links(links: dict, filepath: Path):
-    """
-    Сохраняет ссылки на книги в json.
-
-    :param links: словарь со ссылками на книги.
-    :param filepath: путь до файла json.
-    """
-    with open(filepath, 'w', encoding='utf-8') as file:
-        json.dump(links, file, indent=4, ensure_ascii=False)
