@@ -19,7 +19,7 @@ from parse_tululu_category import get_all_links, save_book_links
 def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--start_page', type=int, default=1, help='с какой страницы начать скачивание книг.')
-    parser.add_argument('--end_page', type=int, default=1, help='какую страницу с книгами скачать последней.')
+    parser.add_argument('--end_page', type=int, help='какую страницу с книгами скачать последней.')
     parser.add_argument('--dest_folder', default='parse_result',
                         help='путь к каталогу с результатами парсинга: картинкам, книгам, JSON.')
     parser.add_argument('--skip_imgs', action='store_true', help='не скачивать картинки.')
