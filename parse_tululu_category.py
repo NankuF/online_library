@@ -23,16 +23,16 @@ def get_links_on_the_page(response: requests.Response) -> dict:
     return {'book_links': book_links_collection, 'max_page': int(max_page)}
 
 
-def get_all_links(url, session, start_page=1, end_page=None) -> dict:
+def get_all_book_links(url, session, start_page=1, end_page=None) -> dict:
     """
-    Проходит по всем страницам каталога и собирает словарь с книгами.
+    Проходит по всем страницам каталога и собирает словарь со ссылками на книги.
     Если end_page не указан, скачает весь каталог.
 
     :param url: ссылка на страницу каталога.
     :param session: объект сессии.
     :param start_page: страница с которой начать скачивать ссылки на книги.
     :param end_page: какую страницу с книгами скачать последней.
-    :return: словарь в котором ключ: номер страницы, значение: список ссылок на страницы книг.
+    :return: словарь в котором ключ: номер страницы, значение: список ссылок на книги.
     """
     if not end_page:
         end_page = math.inf

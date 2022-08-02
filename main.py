@@ -13,7 +13,7 @@ from pathvalidate import sanitize_filename
 from requests import HTTPError
 from requests.sessions import Session
 
-from parse_tululu_category import get_all_links, save_book_links
+from parse_tululu_category import get_all_book_links, save_book_links
 
 
 def create_parser():
@@ -136,14 +136,14 @@ def save_links_collection(url: str, session, start_page: int, end_page: int, fol
     if not Path(book_collection_path).exists():
         Path.mkdir(folder, exist_ok=True)
         print(message)
-        books_collections = get_all_links(url, start_page=start_page, end_page=end_page, session=session)
+        books_collections = get_all_book_links(url, start_page=start_page, end_page=end_page, session=session)
         save_book_links(books_collections, book_collection_path)
     else:
         with open(book_collection_path, 'r') as file:
             books = json.load(file)
         if not books.get(str(end_page)) or not books.get(str(start_page)):
             print(message)
-            books_collections = get_all_links(url, start_page=start_page, end_page=end_page, session=session)
+            books_collections = get_all_book_links(url, start_page=start_page, end_page=end_page, session=session)
             save_book_links(books_collections, book_collection_path)
 
     with open(book_collection_path, 'r') as file:
