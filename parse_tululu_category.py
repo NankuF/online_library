@@ -19,8 +19,7 @@ def get_links_on_the_page(response: requests.Response) -> dict:
     current_page = soup.select_one('.npage_select').text
     max_page = soup.select('.npage')[-1].text
     book_links = [urllib.parse.urljoin('https://tululu.org/', link) for link in book_hrefs]
-    books_collection = {}
-    books_collection.update({current_page: book_links})
+    books_collection = {current_page: book_links}
     return {'books': books_collection, 'max_page': int(max_page)}
 
 
