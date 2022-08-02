@@ -19,12 +19,11 @@ def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--start_page', type=int, default=1, help='с какой страницы начать скачивание книг.')
     parser.add_argument('--end_page', type=int, default=1, help='какую страницу с книгами скачать последней.')
-    parser.add_argument('--dest_folder', type=str, default='parse_result',
+    parser.add_argument('--dest_folder', default='parse_result',
                         help='путь к каталогу с результатами парсинга: картинкам, книгам, JSON.')
     parser.add_argument('--skip_imgs', action='store_true', help='не скачивать картинки.')
     parser.add_argument('--skip_txt', action='store_true', help='не скачивать книги.')
-    parser.add_argument('--json_path', type=str, default='parse_result',
-                        help=' указать свой путь к *.json файлу с результатами')
+    parser.add_argument('--json_path', default='parse_result', help=' указать свой путь к *.json файлу с результатами')
 
     return parser
 
