@@ -38,7 +38,8 @@ def get_all_links(url, session, start_page=1, end_page=None) -> dict:
     if end_page is None:
         end_page = math.inf
     books_collection = {}
-    while start_page <= end_page:
+    page_number = start_page
+    while page_number <= end_page:
         next_url = urllib.parse.urljoin(url, str(start_page))
         resp = session.get(next_url)
         resp.raise_for_status()
@@ -47,7 +48,7 @@ def get_all_links(url, session, start_page=1, end_page=None) -> dict:
         books_collection.update(books.get('books'))
         if not isinstance(end_page, int):
             end_page = books.get('max_page')
-        start_page += 1
+        page_number += 1
 
     return books_collection
 
