@@ -135,7 +135,20 @@ def main():
 
     library = []
     with requests.Session() as session:
-        book_links = get_all_book_links(url, start_page=start_page, end_page=end_page, session=session)
+        while True:
+            try:
+                book_links = get_all_book_links(url, start_page=start_page, end_page=end_page, session=session)
+                break
+            except HTTPError:
+                traceback.print_exc(limit=0)
+                break
+            except requests.ConnectionError:
+                if count_reconnect < 2:
+                    connection_error_timeout = 30
+                traceback.print_exc(limit=0)
+                time.sleep(connection_error_timeout)
+                count_reconnect += 1
+                continue
 
         if not end_page:
             end_page = int(list(book_links.keys())[-1])
