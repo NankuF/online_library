@@ -131,7 +131,7 @@ def save_links_collection(url: str, session, start_page: int, end_page: int, fol
     :return: словарь с ссылками на книги.
     """
     book_collection_path = Path(folder) / 'links_collection.json'
-    last_page = end_page if end_page is not None else 'последнюю'
+    last_page = end_page if end_page else 'последнюю'
     message = f'Скачиваю ссылки на книги c {start_page} по {last_page} страницы.'
     if not Path(book_collection_path).exists():
         Path.mkdir(folder, exist_ok=True)
@@ -169,7 +169,7 @@ def main():
     with requests.Session() as session:
         books = save_links_collection(url, session, start_page, end_page, folder=json_path)
 
-        if end_page is None:
+        if not end_page:
             end_page = int(list(books.keys())[-1])
         for page in range(start_page, end_page + 1):
             page = str(page)
