@@ -140,8 +140,7 @@ def main():
                 book_links = get_all_book_links(url, start_page=start_page, end_page=end_page, session=session)
                 break
             except HTTPError:
-                traceback.print_exc(limit=0)
-                break
+                continue
             except requests.ConnectionError:
                 if count_reconnect < 2:
                     connection_error_timeout = 30
@@ -176,8 +175,7 @@ def main():
                         library.append(book)
                         break
                     except HTTPError:
-                        traceback.print_exc(limit=0)
-                        break
+                        continue
                     except IndexError:
                         traceback.print_exc(limit=0)
                         break
