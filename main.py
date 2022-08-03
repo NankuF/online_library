@@ -149,43 +149,39 @@ def main():
                 count_reconnect += 1
                 continue
 
-        if not end_page:
-            end_page = int(list(book_links.keys())[-1])
-        for page in range(start_page, end_page + 1):
-            page = str(page)
-            for book_link in book_links[page]:
-                while True:
-                    try:
-                        resp = session.get(book_link)
-                        resp.raise_for_status()
-                        check_for_redirect(resp)
+        for book_link in book_links:
+            while True:
+                try:
+                    resp = session.get(book_link)
+                    resp.raise_for_status()
+                    check_for_redirect(resp)
 
-                        book = parse_book_page(resp)
-                        book_path = image_src = ''
-                        if not skip_txt:
-                            book_path = download_txt(url=book['download_book_url'],
-                                                     filename=book['title'],
-                                                     session=session,
-                                                     folder=dest_folder)
-                            print('Скачана книга: ', book['title'])
-                        if not skip_imgs:
-                            image_src = download_image(url=book['image_url'], session=session, folder=dest_folder)
+                    book = parse_book_page(resp)
+                    book_path = image_src = ''
+                    if not skip_txt:
+                        book_path = download_txt(url=book['download_book_url'],
+                                                 filename=book['title'],
+                                                 session=session,
+                                                 folder=dest_folder)
+                        print('Скачана книга: ', book['title'])
+                    if not skip_imgs:
+                        image_src = download_image(url=book['image_url'], session=session, folder=dest_folder)
 
-                        book.update({'book_path': str(book_path), 'image_src': str(image_src)})
-                        library.append(book)
-                        break
-                    except HTTPError:
-                        continue
-                    except IndexError:
-                        traceback.print_exc(limit=0)
-                        break
-                    except requests.ConnectionError:
-                        if count_reconnect < 2:
-                            connection_error_timeout = 30
-                        traceback.print_exc(limit=0)
-                        time.sleep(connection_error_timeout)
-                        count_reconnect += 1
-                        continue
+                    book.update({'book_path': str(book_path), 'image_src': str(image_src)})
+                    library.append(book)
+                    break
+                except HTTPError:
+                    continue
+                except IndexError:
+                    traceback.print_exc(limit=0)
+                    break
+                except requests.ConnectionError:
+                    if count_reconnect < 2:
+                        connection_error_timeout = 30
+                    traceback.print_exc(limit=0)
+                    time.sleep(connection_error_timeout)
+                    count_reconnect += 1
+                    continue
 
     path = Path(json_path) / 'fantastic_books_catalog.json'
     Path.mkdir(path.parent, exist_ok=True)
